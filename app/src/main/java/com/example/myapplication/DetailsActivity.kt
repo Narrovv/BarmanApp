@@ -20,11 +20,12 @@ class DetailsActivity : ComponentActivity() {
 
         val drinkName = intent.getStringExtra("drink_name") ?: "Brak nazwy"
         val drinkRecipe = intent.getStringExtra("drink_recipe") ?: "Brak przepisu"
-        val drinkImage = intent.getIntExtra("drink_image", 0) // Pobranie ID obrazka
+        val drinkImage = intent.getIntExtra("drink_image", 0)
+        val drinkSteps = intent.getStringArrayExtra("drink_steps")?.toList() ?: emptyList()
 
         setContent {
             MyApplicationTheme {
-                DrinkDetailsScreen(drinkName, drinkRecipe, drinkImage)
+                DrinkDetailsScreen(drinkName, drinkRecipe, drinkImage, drinkSteps)
             }
         }
     }
@@ -32,7 +33,7 @@ class DetailsActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DrinkDetailsScreen(drinkName: String, drinkRecipe: String, drinkImage: Int) {
+fun DrinkDetailsScreen(drinkName: String, drinkRecipe: String, drinkImage: Int, drinkSteps: List<String>) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -56,6 +57,11 @@ fun DrinkDetailsScreen(drinkName: String, drinkRecipe: String, drinkImage: Int) 
             Text(text = drinkName, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = drinkRecipe, fontSize = 18.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = "Kroki przygotowania:", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            drinkSteps.forEachIndexed { index, step ->
+                Text(text = "${index + 1}. $step", fontSize = 18.sp)
+            }
         }
     }
 }
