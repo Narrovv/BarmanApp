@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -27,13 +26,15 @@ import com.example.myapplication.data.DataProvider
 import com.example.myapplication.data.Drinki
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import androidx.compose.foundation.background
+import android.content.Context
+import kotlin.math.sqrt
+import kotlin.math.pow
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApplicationTheme(darkTheme = true) { // Wymuszamy ciemny motyw
-                // Całe tło dla aplikacji
+            MyApplicationTheme(darkTheme = true) {
                 Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                     MyApp()
                 }
@@ -42,31 +43,36 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Funkcja do sprawdzenia, czy ekran ma minimum 600dp szerokości (tablet)
 @Composable
-fun isTablet(): Boolean {
-    val configuration = LocalConfiguration.current
-    return configuration.screenWidthDp >= 600
+fun Context.isTablet(): Boolean {
+    val metrics = resources.displayMetrics
+    val screenWidthInch = metrics.widthPixels / metrics.xdpi
+    val screenHeightInch = metrics.heightPixels / metrics.ydpi
+    val diagonalInch = sqrt(screenWidthInch.pow(2) + screenHeightInch.pow(2))
+    return diagonalInch >= 7.0
 }
 
 @Composable
 fun MyApp() {
     val context = LocalContext.current
-    val isTablet = isTablet()
+    val isTablet = context.isTablet()
     val selectedDrink = remember { mutableStateOf<Drinki?>(null) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black) // Ustawiamy tło aplikacji na czarne
+            .background(Color.Black)
     ) {
         if (isTablet) {
-            // Układ dwukolumnowy na tablecie
             Row(modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.weight(1f)) {
                     DrinkiContent(navigateTo = { selectedDrink.value = it })
                 }
-                Box(modifier = Modifier.weight(2f)) {
+                Column(modifier = Modifier
+                    .weight(2f)
+                    .fillMaxHeight()
+                    .padding(16.dp)) {
+
                     selectedDrink.value?.let {
                         DrinkDetailsScreen(
                             drinkName = it.name,
@@ -74,13 +80,14 @@ fun MyApp() {
                             drinkImage = it.imageId,
                             drinkSteps = it.steps
                         )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Timer(drinkId = it.name)
                     } ?: Box(Modifier.fillMaxSize()) {
                         Text("Wybierz drink z listy", modifier = Modifier.align(Alignment.Center))
                     }
                 }
             }
         } else {
-            // Na telefonie: tylko lista, kliknięcie otwiera nową aktywność
             DrinkiContent(navigateTo = { drink ->
                 val intent = Intent(context, DetailsActivity::class.java).apply {
                     putExtra("drink_id", drink.id)
