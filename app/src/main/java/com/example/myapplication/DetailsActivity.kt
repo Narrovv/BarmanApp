@@ -24,6 +24,12 @@ import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import android.content.Context
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.core.net.toUri
+
 
 class DetailsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,9 +39,10 @@ class DetailsActivity : ComponentActivity() {
         val drinkRecipe = intent.getStringExtra("drink_recipe") ?: "Brak przepisu"
         val drinkImage = intent.getIntExtra("drink_image", 0)
         val drinkSteps = intent.getStringArrayExtra("drink_steps")?.toList() ?: emptyList()
+        val darkTheme = intent.getBooleanExtra("dark_theme", true)
 
         setContent {
-            MyApplicationTheme {
+            MyApplicationTheme(darkTheme = darkTheme) {
                 DrinkDetailsScreen(drinkName, drinkRecipe, drinkImage, drinkSteps)
             }
         }
@@ -50,11 +57,37 @@ fun DrinkDetailsScreen(
     drinkImage: Int,
     drinkSteps: List<String>
 ) {
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "Szczegóły Drinku", fontSize = 18.sp) }
+                title = { Text(text = "Szczegóły Drinku") },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        // Zakończ DetailsActivity zamiast uruchamiać nową instancję MainActivity
+                        (context as? DetailsActivity)?.finish()
+                    }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.home_icon),
+                            contentDescription = "Strona Główna"
+                        )
+                    }
+                }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { sendSms(context, drinkName, drinkRecipe) },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.sms_icon),
+                    contentDescription = "Wyślij SMS",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -84,6 +117,28 @@ fun DrinkDetailsScreen(
         }
     }
 }
+
+fun sendSms(context: Context, drinkName: String, drinkRecipe: String) {
+    val smsBody = "Składniki na drink '$drinkName':\n$drinkRecipe"
+
+    val phoneNumber = "123456789"
+
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = if (phoneNumber.isNotEmpty()) {
+            "smsto:$phoneNumber".toUri()
+        } else {
+            "smsto:".toUri()
+        }
+        putExtra("sms_body", smsBody)
+    }
+
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
 @Composable
 fun Timer(drinkId: String?) {
     var time by remember { mutableStateOf(0L) }
@@ -137,7 +192,7 @@ fun Timer(drinkId: String?) {
                 } else {
                     Image(
                         painter = painterResource(id = R.drawable.play_icon),
-                        contentDescription = "Start",
+                        contentDescription = "Stop",
                         modifier = Modifier.size(40.dp)
                     )
                 }
@@ -148,8 +203,9 @@ fun Timer(drinkId: String?) {
             Button(
                 onClick = {
                     isRunning = false
-                    time = 0L
+                    startTime = System.currentTimeMillis()
                     elapsedTime = 0L
+                    time = 0L
                 },
                 modifier = Modifier.weight(1f)
             ) {
@@ -164,16 +220,16 @@ fun Timer(drinkId: String?) {
 
     LaunchedEffect(isRunning) {
         while (isRunning) {
-            delay(1000)
+            delay(10L)
             time = System.currentTimeMillis() - startTime
         }
     }
 }
 
-@Composable
-fun formatTime(timeMi :Long):String{
-    val hours = TimeUnit.MILLISECONDS.toHours(timeMi)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(timeMi) % 60
+private fun formatTime(timeMi: Long): String {
     val seconds = TimeUnit.MILLISECONDS.toSeconds(timeMi) % 60
+    val minutes = TimeUnit.MILLISECONDS.toMinutes(timeMi) % 60
+    val hours = TimeUnit.MILLISECONDS.toHours(timeMi) % 24
+
     return String.format("%02d:%02d:%02d", hours, minutes, seconds)
 }

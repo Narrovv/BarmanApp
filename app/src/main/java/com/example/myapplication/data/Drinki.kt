@@ -5,5 +5,6 @@ data class Drinki(
     val name: String,
     val recipe: String,
     val imageId: Int,
-    val steps: List<String>
+    val steps: List<String>,
+    val isAlcoholic: Boolean
 )
