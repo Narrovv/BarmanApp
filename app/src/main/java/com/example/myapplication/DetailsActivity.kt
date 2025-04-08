@@ -175,10 +175,6 @@ class TimerViewModel : ViewModel() {
 fun Timer(drinkId: String?, timerViewModel: TimerViewModel = viewModel()) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    LaunchedEffect(drinkId) {
-        // Reset state logic can be managed within the ViewModel or removed
-    }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
