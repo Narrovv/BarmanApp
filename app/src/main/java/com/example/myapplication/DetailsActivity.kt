@@ -15,7 +15,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.res.painterResource
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -29,6 +28,10 @@ import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.core.net.toUri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 
 
 class DetailsActivity : ComponentActivity() {
@@ -65,7 +68,6 @@ fun DrinkDetailsScreen(
                 title = { Text(text = "Szczegóły Drinku") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // Zakończ DetailsActivity zamiast uruchamiać nową instancję MainActivity
                         (context as? DetailsActivity)?.finish()
                     }) {
                         Icon(
@@ -139,19 +141,42 @@ fun sendSms(context: Context, drinkName: String, drinkRecipe: String) {
     }
 }
 
+class TimerViewModel : ViewModel() {
+    var time by mutableStateOf(0L)
+    var isRunning by mutableStateOf(false)
+    var startTime by mutableStateOf(0L)
+    var elapsedTime by mutableStateOf(0L)
+
+    fun startTimer() {
+        startTime = System.currentTimeMillis() - elapsedTime
+        isRunning = true
+    }
+
+    fun stopTimer() {
+        isRunning = false
+        elapsedTime = time
+    }
+
+    fun resetTimer() {
+        isRunning = false
+        startTime = System.currentTimeMillis()
+        elapsedTime = 0L
+        time = 0L
+    }
+
+    fun updateTime() {
+        if (isRunning) {
+            time = System.currentTimeMillis() - startTime
+        }
+    }
+}
+
 @Composable
-fun Timer(drinkId: String?) {
-    var time by remember { mutableStateOf(0L) }
-    var isRunning by remember { mutableStateOf(false) }
-    var startTime by remember { mutableStateOf(0L) }
-    var elapsedTime by remember { mutableStateOf(0L) }
+fun Timer(drinkId: String?, timerViewModel: TimerViewModel = viewModel()) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(drinkId) {
-        isRunning = false
-        time = 0L
-        startTime = 0L
-        elapsedTime = 0L
+        // Reset state logic can be managed within the ViewModel or removed
     }
 
     Column(
@@ -162,7 +187,7 @@ fun Timer(drinkId: String?) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = formatTime(timeMi = time),
+            text = formatTime(timeMi = timerViewModel.time),
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(9.dp)
         )
@@ -172,18 +197,16 @@ fun Timer(drinkId: String?) {
         Row {
             Button(
                 onClick = {
-                    if (isRunning) {
-                        isRunning = false
-                        elapsedTime = time
+                    if (timerViewModel.isRunning) {
+                        timerViewModel.stopTimer()
                     } else {
-                        startTime = System.currentTimeMillis()- elapsedTime
-                        isRunning = true
+                        timerViewModel.startTimer()
                         keyboardController?.hide()
                     }
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                if (isRunning) {
+                if (timerViewModel.isRunning) {
                     Image(
                         painter = painterResource(id = R.drawable.pause_icon),
                         contentDescription = "Stop",
@@ -192,7 +215,7 @@ fun Timer(drinkId: String?) {
                 } else {
                     Image(
                         painter = painterResource(id = R.drawable.play_icon),
-                        contentDescription = "Stop",
+                        contentDescription = "Start",
                         modifier = Modifier.size(40.dp)
                     )
                 }
@@ -202,10 +225,7 @@ fun Timer(drinkId: String?) {
 
             Button(
                 onClick = {
-                    isRunning = false
-                    startTime = System.currentTimeMillis()
-                    elapsedTime = 0L
-                    time = 0L
+                    timerViewModel.resetTimer()
                 },
                 modifier = Modifier.weight(1f)
             ) {
@@ -218,10 +238,10 @@ fun Timer(drinkId: String?) {
         }
     }
 
-    LaunchedEffect(isRunning) {
-        while (isRunning) {
+    LaunchedEffect(timerViewModel.isRunning) {
+        while (timerViewModel.isRunning) {
             delay(10L)
-            time = System.currentTimeMillis() - startTime
+            timerViewModel.updateTime()
         }
     }
 }
