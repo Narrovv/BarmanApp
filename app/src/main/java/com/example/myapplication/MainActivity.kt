@@ -1,11 +1,16 @@
 package com.example.myapplication
 
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,133 +26,139 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.myapplication.data.DataProvider
 import com.example.myapplication.data.Drinki
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import androidx.compose.foundation.background
-import android.content.Context
-import kotlin.math.sqrt
-import kotlin.math.pow
-import androidx.compose.foundation.isSystemInDarkTheme
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
 import kotlinx.coroutines.launch
+import android.content.Context
+import kotlin.math.pow
+import kotlin.math.sqrt
+import android.view.animation.BounceInterpolator
+import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.saveable.rememberSaveable
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPagerApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             val systemDarkTheme = isSystemInDarkTheme()
             var darkTheme by remember { mutableStateOf(systemDarkTheme) }
             val filterState = remember { mutableStateOf(Filter.ALL) }
             val pagerState = rememberPagerState(initialPage = 0)
             val coroutineScope = rememberCoroutineScope()
+            var showAnimation by rememberSaveable { mutableStateOf(true) }
 
-            MyApplicationTheme(darkTheme = darkTheme) {
-                Column(
+            LaunchedEffect(pagerState.currentPage) {
+                filterState.value = when (pagerState.currentPage) {
+                    0 -> Filter.ALL
+                    1 -> Filter.ALCOHOLIC
+                    2 -> Filter.NON_ALCOHOLIC
+                    else -> Filter.ALL
+                }
+            }
+
+            if (showAnimation) {
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                        .statusBarsPadding()
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Switch(
-                            checked = darkTheme,
-                            onCheckedChange = { darkTheme = it }
-                        )
-                        Row {
-                            Button(
-                                onClick = {
-                                    filterState.value = Filter.ALL
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(0)
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (filterState.value == Filter.ALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                )
+                    AndroidView(factory = { context ->
+                        ImageView(context).apply {
+                            setImageResource(R.drawable.logo)
+                            alpha = 1f
+                            translationY = -800f
 
-                            ) {
-                                Text(
-                                    "Wszystkie",
-                                    fontSize = 12.sp
-                                )
+                            val slideDown = ObjectAnimator.ofFloat(this, View.TRANSLATION_Y, 0f).apply {
+                                duration = 1500
+                                interpolator = BounceInterpolator()
                             }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Button(
-                                onClick = {
-                                    filterState.value = Filter.ALCOHOLIC
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(1)
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (filterState.value == Filter.ALCOHOLIC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                )
-                            ) {
-                                Text(
-                                    "Alkoholowe",
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Button(
-                                onClick = {
-                                    filterState.value = Filter.NON_ALCOHOLIC
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(2)
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (filterState.value == Filter.NON_ALCOHOLIC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-                                ),
-                                modifier = Modifier.width(IntrinsicSize.Max)
-                            ) {
-                                Text(
-                                    "Bezalk.",
-                                    fontSize = 12.sp,
-                                    softWrap = false
-                                )
+
+                            slideDown.start()
+
+                            postDelayed({
+                                showAnimation = false
+                            }, 1900)
+                        }
+                    })
+                }
+            } else {
+                MyApplicationTheme(darkTheme = darkTheme) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                            .statusBarsPadding()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Switch(
+                                checked = darkTheme,
+                                onCheckedChange = { darkTheme = it }
+                            )
+                            Row {
+                                Button(
+                                    onClick = {
+                                        filterState.value = Filter.ALL
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(0)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (filterState.value == Filter.ALL) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    )
+                                ) {
+                                    Text("Wszystkie", fontSize = 12.sp)
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Button(
+                                    onClick = {
+                                        filterState.value = Filter.ALCOHOLIC
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(1)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (filterState.value == Filter.ALCOHOLIC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    )
+                                ) {
+                                    Text("Alkoholowe", fontSize = 12.sp)
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Button(
+                                    onClick = {
+                                        filterState.value = Filter.NON_ALCOHOLIC
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(2)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (filterState.value == Filter.NON_ALCOHOLIC) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                                    ),
+                                    modifier = Modifier.width(IntrinsicSize.Max)
+                                ) {
+                                    Text("Bezalk.", fontSize = 12.sp, softWrap = false)
+                                }
                             }
                         }
-                    }
-                    HorizontalPager(
-                        count = 3,
-                        state = pagerState,
-                        modifier = Modifier.weight(1f),
-                    ) { page ->
-                        when (page) {
-                            0 -> {
-                                LaunchedEffect(pagerState.currentPage) {
-                                    if (pagerState.currentPage == page) {
-                                        filterState.value = Filter.ALL
-                                    }
-                                }
-                                MyApp(filter = filterState.value, darkTheme = darkTheme)
-                            }
-                            1 -> {
-                                LaunchedEffect(pagerState.currentPage) {
-                                    if (pagerState.currentPage == page) {
-                                        filterState.value = Filter.ALCOHOLIC
-                                    }
-                                }
-                                MyApp(filter = filterState.value, darkTheme = darkTheme)
-                            }
-                            2 -> {
-                                LaunchedEffect(pagerState.currentPage) {
-                                    if (pagerState.currentPage == page) {
-                                        filterState.value = Filter.NON_ALCOHOLIC
-                                    }
-                                }
-                                MyApp(filter = filterState.value, darkTheme = darkTheme)
-                            }
+
+                        HorizontalPager(
+                            count = 3,
+                            state = pagerState,
+                            modifier = Modifier.weight(1f),
+                        ) { page ->
+                            MyApp(filter = filterState.value, darkTheme = darkTheme)
                         }
                     }
                 }
@@ -175,13 +186,8 @@ fun MyApp(modifier: Modifier = Modifier, filter: Filter, darkTheme: Boolean) {
     val isTablet = context.isTablet()
     val selectedDrink = remember { mutableStateOf<Drinki?>(null) }
 
-    Scaffold(
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-        ) {
+    Scaffold {
+        Box(modifier = Modifier.padding(it).fillMaxSize()) {
             if (isTablet) {
                 Row(modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -191,7 +197,6 @@ fun MyApp(modifier: Modifier = Modifier, filter: Filter, darkTheme: Boolean) {
                         .weight(2f)
                         .fillMaxHeight()
                         .padding(16.dp)) {
-
                         selectedDrink.value?.let {
                             DrinkDetailsScreen(
                                 drinkName = it.name,
@@ -222,7 +227,6 @@ fun MyApp(modifier: Modifier = Modifier, filter: Filter, darkTheme: Boolean) {
         }
     }
 }
-
 
 @Composable
 fun DrinkiContent(filter: Filter, navigateTo: (Drinki) -> Unit, modifier: Modifier = Modifier) {
@@ -267,11 +271,7 @@ fun MainCard(filter: Filter) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = mainCardText,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = mainCardText, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             if (filter == Filter.ALL) {
                 Text(
@@ -300,14 +300,8 @@ fun DrinkiListItem(drink: Drinki, navigateTo: (Drinki) -> Unit) {
                     .fillMaxWidth()
                     .align(Alignment.CenterVertically)
             ) {
-                Text(
-                    text = drink.name,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Zobacz szczegóły",
-                )
+                Text(text = drink.name, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(text = "Zobacz szczegóły")
             }
         }
     }
